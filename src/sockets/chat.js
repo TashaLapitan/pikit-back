@@ -1,22 +1,36 @@
 const Message = require("../models/Message");
+const Chat = require("../models/Chat");
 
 module.exports = (io) => {
   io.on("connection", (socket) => {
     console.log(`🔌 User connected: ${socket.id}`);
 
-    // Send chat history on connect
-    Message.find()
-      .sort({ timestamp: 1 })
-      .then((messages) => {
-        socket.emit("chatHistory", messages);
-      });
+    // Join a chat room
+    socket.on("joinChat", async (chatId) => {
+      const chatExists = await Chat.findById(chatId);
+      if (!chatExists) {
+        socket.emit("error", "Chat not found");
+        return;
+      }
 
-    // Listen for new messages via WebSocket
+      socket.join(chatId);
+      console.log(`📢 User joined chat: ${chatId}`);
+
+      // Send previous messages
+      const messages = await Message.find({ chatId }).sort({ timestamp: 1 });
+      socket.emit("chatHistory", messages);
+    });
+
+    // Listen for new messages
     socket.on("sendMessage", async (data) => {
-      const newMessage = new Message({ user: data.user, message: data.message });
+      const { chatId, user, message } = data;
+
+      if (!chatId || !user || !message) return;
+
+      const newMessage = new Message({ chatId, user, message });
       await newMessage.save();
 
-      io.emit("receiveMessage", newMessage);
+      io.to(chatId).emit("receiveMessage", newMessage);
     });
 
     socket.on("disconnect", () => {
@@ -24,4 +38,3 @@ module.exports = (io) => {
     });
   });
 };
-

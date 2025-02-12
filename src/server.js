@@ -4,7 +4,7 @@ const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
 const connectDB = require("./config/db");
-const messageRoutes = require("./routes/messages");
+const chatRoutes = require("./routes/chats");
 
 const app = express();
 const server = http.createServer(app);
@@ -21,7 +21,7 @@ connectDB();
 require("./sockets/chat")(io);
 
 // Register API routes
-app.use("/api/messages", messageRoutes);
+app.use("/api/chats", chatRoutes);
 
 // Start Server
 const PORT = process.env.PORT || 3000;
